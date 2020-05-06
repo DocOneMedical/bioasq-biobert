@@ -34,41 +34,36 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-## Required parameters
+# Required parameters
 flags.DEFINE_string(
         "bert_config_file", None,
         "The config json file corresponding to the pre-trained BERT model. "
         "This specifies the model architecture.")
 
 flags.DEFINE_string("vocab_file", None,
-                                        "The vocabulary file that the BERT model was trained on.")
+                    "The vocabulary file that the BERT model was trained on.")
 
-flags.DEFINE_string(
-        "output_dir", None,
-        "The output directory where the model checkpoints will be written.")
+flags.DEFINE_string("output_dir", None,
+                    "The output directory where the model checkpoints will be written.")
 
-## Other parameters
+# Other parameters
 flags.DEFINE_string("train_file", None,
-                                        "SQuAD json for training. E.g., train-v1.1.json")
+                    "SQuAD json for training. E.g., train-v1.1.json")
 
-flags.DEFINE_string(
-        "predict_file", None,
-        "SQuAD json for predictions. E.g., dev-v1.1.json or test-v1.1.json")
+flags.DEFINE_string("predict_file", None,
+                    "SQuAD json for predictions. E.g., dev-v1.1.json or test-v1.1.json")
 
-flags.DEFINE_string(
-        "init_checkpoint", None,
-        "Initial checkpoint (usually from a pre-trained BERT model).")
+flags.DEFINE_string("init_checkpoint", None,
+                    "Initial checkpoint (usually from a pre-trained BERT model).")
 
-flags.DEFINE_bool(
-        "do_lower_case", True,
-        "Whether to lower case the input text. Should be True for uncased "
-        "models and False for cased models.")
+flags.DEFINE_bool("do_lower_case", True,
+                  "Whether to lower case the input text. Should be True for uncased "
+                  "models and False for cased models.")
 
-flags.DEFINE_integer(
-        "max_seq_length", 384,
-        "The maximum total input sequence length after WordPiece tokenization. "
-        "Sequences longer than this will be truncated, and sequences shorter "
-        "than this will be padded.")
+flags.DEFINE_integer("max_seq_length", 384,
+                     "The maximum total input sequence length after WordPiece tokenization. "
+                     "Sequences longer than this will be truncated, and sequences shorter "
+                     "than this will be padded.")
 
 flags.DEFINE_integer(
         "doc_stride", 128,
@@ -87,12 +82,12 @@ flags.DEFINE_bool("do_predict", False, "Whether to run eval on the dev set.")
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
 
 flags.DEFINE_integer("predict_batch_size", 8,
-                                         "Total batch size for predictions.")
+                     "Total batch size for predictions.")
 
 flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
 
 flags.DEFINE_float("num_train_epochs", 3.0,
-                                     "Total number of training epochs to perform.")
+                   "Total number of training epochs to perform.")
 
 flags.DEFINE_float(
         "warmup_proportion", 0.1,
@@ -100,10 +95,10 @@ flags.DEFINE_float(
         "E.g., 0.1 = 10% of training.")
 
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
-                                         "How often to save the model checkpoint.")
+                     "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
-                                         "How many steps to make in each estimator call.")
+                     "How many steps to make in each estimator call.")
 
 flags.DEFINE_integer(
         "n_best_size", 20,
@@ -167,10 +162,10 @@ class SquadExample(object):
     """
 
     def __init__(self,
-                             qas_id,
-                             question_text,
-                             doc_tokens,
-                             answer):
+                 qas_id,
+                 question_text,
+                 doc_tokens,
+                 answer):
         self.qas_id = qas_id
         self.question_text = question_text
         self.doc_tokens = doc_tokens
@@ -194,16 +189,16 @@ class InputFeatures(object):
     """A single set of features of data."""
 
     def __init__(self,
-                             unique_id,
-                             example_index,
-                             doc_span_index,
-                             tokens,
-                             token_to_orig_map,
-                             token_is_max_context,
-                             input_ids,
-                             input_mask,
-                             segment_ids,
-                             target):
+                 unique_id,
+                 example_index,
+                 doc_span_index,
+                 tokens,
+                 token_to_orig_map,
+                 token_is_max_context,
+                 input_ids,
+                 input_mask,
+                 segment_ids,
+                 target):
         self.unique_id = unique_id
         self.example_index = example_index
         self.doc_span_index = doc_span_index
@@ -218,12 +213,9 @@ class InputFeatures(object):
 
 def read_squad_examples(input_file, is_training):
     """Read a SQuAD json file into a list of SquadExample."""
-    is_bioasq=True # for BioASQ
+    is_bioasq = True  # for BioASQ
 
     with tf.gfile.Open(input_file, "r") as reader:
-        #if is_bioasq:
-            #input_data = [{u'paragraphs':json.load(reader)["questions"], u'title':'bioASQ'}] # to fit the shape of squad code
-        #else:
         input_data = json.load(reader)["data"]
 
     def is_whitespace(c):
@@ -239,7 +231,7 @@ def read_squad_examples(input_file, is_training):
             char_to_word_offset = []
             prev_is_whitespace = True
             if is_bioasq:
-                paragraph_text.replace('/',' ')  # need review
+                paragraph_text.replace('/', ' ')  # need review
             for c in paragraph_text:
                 if is_whitespace(c):
                     prev_is_whitespace = True
@@ -256,7 +248,7 @@ def read_squad_examples(input_file, is_training):
                 question_text = qa["question"]
                 answer = None
                 if is_training:
-                    assert (qa["is_impossible"] == True) != (qa["answers"] == "yes")
+                    assert (qa["is_impossible"] is True) != (qa["answers"] == "yes")
                     assert qa["answers"] in ["yes", "no"]
                     answer = 1 if qa["answers"] == 'yes' else 0
 
@@ -301,8 +293,8 @@ def read_squad_examples(input_file, is_training):
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
-                                                                 doc_stride, max_query_length, is_training,
-                                                                 output_fn):
+                                 doc_stride, max_query_length, is_training,
+                                 output_fn):
     """Loads a data file into a list of `InputBatch`s."""
 
     unique_id = 1000000000
@@ -360,9 +352,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             for i in range(doc_span.length):
                 split_token_index = doc_span.start + i
                 token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
-
-                is_max_context = _check_is_max_context(doc_spans, doc_span_index,
-                                                                                             split_token_index)
+                is_max_context = _check_is_max_context(doc_spans, doc_span_index, split_token_index)
                 token_is_max_context[len(tokens)] = is_max_context
                 tokens.append(all_doc_tokens[split_token_index])
                 segment_ids.append(1)
@@ -461,7 +451,7 @@ def _check_is_max_context(doc_spans, cur_span_index, position):
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-                                 use_one_hot_embeddings):
+                 use_one_hot_embeddings):
     """Creates a classification model."""
     model = modeling.BertModel(
             config=bert_config,
@@ -512,8 +502,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 
 def model_fn_builder(bert_config, init_checkpoint, learning_rate,
-                                         num_train_steps, num_warmup_steps, use_tpu,
-                                         use_one_hot_embeddings):
+                     num_train_steps, num_warmup_steps, use_tpu,
+                     use_one_hot_embeddings):
     """Returns `model_fn` closure for TPUEstimator."""
 
     def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
@@ -543,10 +533,8 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
         initialized_variable_names = {}
         scaffold_fn = None
         if init_checkpoint:
-            (assignment_map, initialized_variable_names
-            ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+            (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
             if use_tpu:
-
                 def tpu_scaffold():
                     tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
                     return tf.train.Scaffold()
@@ -560,8 +548,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
             init_string = ""
             if var.name in initialized_variable_names:
                 init_string = ", *INIT_FROM_CKPT*"
-            tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                                            init_string)
+            tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape, init_string)
             break
 
         output_spec = None
@@ -589,7 +576,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
 
             train_op = optimization.create_optimizer(
                     total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
-            logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss}, every_n_iter=50)
+            logging_hook = tf.train.LoggingTensorHook({"loss": total_loss}, every_n_iter=50)
 
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
@@ -652,19 +639,17 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
             d = d.repeat(None)
             # d = d.shuffle(buffer_size=100)
 
-        d = d.apply(
-                tf.contrib.data.map_and_batch(
-                        lambda record: _decode_record(record, name_to_features),
-                        batch_size=batch_size,
-                        drop_remainder=drop_remainder))
+        d = d.apply(tf.contrib.data.map_and_batch(
+                lambda record: _decode_record(record, name_to_features),
+                batch_size=batch_size,
+                drop_remainder=drop_remainder))
 
         return d
 
     return input_fn
 
 
-RawResult = collections.namedtuple("RawResult",
-                                                                     ["unique_id", "logits"])
+RawResult = collections.namedtuple("RawResult", ["unique_id", "logits"])
 
 
 def write_predictions(all_examples, all_features, all_results, n_best_size,
@@ -727,6 +712,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     with tf.gfile.GFile(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
 
+
 def get_final_text(pred_text, orig_text, do_lower_case):
     """Project the tokenized prediction back to the original text."""
 
@@ -787,8 +773,7 @@ def get_final_text(pred_text, orig_text, do_lower_case):
 
     if len(orig_ns_text) != len(tok_ns_text):
         if FLAGS.verbose_logging:
-            tf.logging.info("Length not equal after stripping spaces: '%s' vs '%s'",
-                                            orig_ns_text, tok_ns_text)
+            tf.logging.info("Length not equal after stripping spaces: '%s' vs '%s'", orig_ns_text, tok_ns_text)
         return orig_text
 
     # We then project the characters in `pred_text` back to `orig_text` using
@@ -884,8 +869,7 @@ class FeatureWriter(object):
 
 def validate_flags_or_throw(bert_config):
     """Validate the input FLAGS or throw an exception."""
-    tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
-                                                                                                FLAGS.init_checkpoint)
+    tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case, FLAGS.init_checkpoint)
 
     if not FLAGS.do_train and not FLAGS.do_predict:
         raise ValueError("At least one of `do_train` or `do_predict` must be True.")
@@ -912,12 +896,11 @@ def validate_flags_or_throw(bert_config):
 
 
 def main(_):
-    #seed = 1111
-    #random.seed(seed)
-    #np.random.seed(seed)
-    #tf.set_random_seed(seed)
-    #tf.logging.set_verbosity(tf.logging.INFO)
-
+    # seed = 1111
+    # random.seed(seed)
+    # np.random.seed(seed)
+    # tf.set_random_seed(seed)
+    # tf.logging.set_verbosity(tf.logging.INFO)
     bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
     validate_flags_or_throw(bert_config)
@@ -993,17 +976,16 @@ def main(_):
 
         # Bootstrap
         for epoch_idx in range(int(FLAGS.num_train_epochs)):
-                train_examples = read_squad_examples(
-                        input_file=FLAGS.train_file, is_training=True)
+            train_examples = read_squad_examples(input_file=FLAGS.train_file, is_training=True)
 
-                convert_examples_to_features(
-                        examples=train_examples,
-                        tokenizer=tokenizer,
-                        max_seq_length=FLAGS.max_seq_length,
-                        doc_stride=FLAGS.doc_stride,
-                        max_query_length=FLAGS.max_query_length,
-                        is_training=True,
-                        output_fn=train_writer.process_feature)
+            convert_examples_to_features(
+                    examples=train_examples,
+                    tokenizer=tokenizer,
+                    max_seq_length=FLAGS.max_seq_length,
+                    doc_stride=FLAGS.doc_stride,
+                    max_query_length=FLAGS.max_query_length,
+                    is_training=True,
+                    output_fn=train_writer.process_feature)
 
         train_writer.close()
         tf.logging.info("***** Running training *****")
