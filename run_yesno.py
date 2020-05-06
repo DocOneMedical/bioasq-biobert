@@ -19,8 +19,10 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+from typing import List, Generator
 import json
 import math
+import glob
 import os
 import random
 import modeling
@@ -29,6 +31,7 @@ import tokenization
 import six
 import numpy as np
 import tensorflow as tf
+
 
 flags = tf.flags
 
@@ -155,6 +158,11 @@ tf.flags.DEFINE_string("bioasq_task", None, "[Optional] TensorFlow master URL.")
 tf.flags.DEFINE_string("bioasq_snippet", None, "[Optional] TensorFlow master URL.")
 
 
+# Docone additions 
+flags.DEFINE_bool("docone", False, "If true, use the docone set for prediction.")
+flags.DEFINE_string("docone_directory", None, "SQuAD json for training. E.g., train-v1.1.json")
+
+
 class SquadExample(object):
     """A single training/test example for simple sequence classification.
 
@@ -183,6 +191,66 @@ class SquadExample(object):
         if self.answer:
             s += ", answer: %r" % (self.answer)
         return s
+
+
+class DoconeIter:
+
+    def __init__(self, docone_data_path: str):
+        if not tf.gfile.Exists(docone_data_path):
+            raise ValueError(f"Data folder doesn't exist {docone_data_path}")
+
+        self.data_path = docone_data_path
+
+    def iterate(self):
+        files = glob.glob(f"{self.data_path}/*")
+        for js in files:
+            with open(js, 'r') as js_handle:
+                examples = self.load_examples_from_json(json.load(js_handle))
+                yield examples
+
+    def load_examples_from_json(self, js_data: dict):
+        paragraphs = js_data["data"][0]["paragraphs"]
+        examples = []
+        for p in paragraphs:
+            text = p["context"]
+            questions = p["qas"]
+            doc_tokens = self.process_text(text)
+
+            for q in questions:
+                example = SquadExample(
+                        qas_id=q['id'],
+                        question_text=q['question'],
+                        doc_tokens=doc_tokens,
+                        answer=None)
+                examples.append(example)
+
+        return examples[:500]
+
+    @staticmethod
+    def process_text(paragraph_text, is_bioasq: bool = True):
+        def is_whitespace(c):
+            if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
+                return True
+            return False
+
+        doc_tokens = []
+        char_to_word_offset = []
+        prev_is_whitespace = True
+        if is_bioasq:
+            paragraph_text.replace('/', ' ')  # need review
+        for c in paragraph_text:
+            if is_whitespace(c):
+                prev_is_whitespace = True
+            else:
+                if prev_is_whitespace:
+                    doc_tokens.append(c)
+                else:
+                    doc_tokens[-1] += c
+                prev_is_whitespace = False
+
+            char_to_word_offset.append(len(doc_tokens) - 1)
+
+        return doc_tokens
 
 
 class InputFeatures(object):
@@ -1005,63 +1073,131 @@ def main(_):
         # estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
         estimator.train(input_fn=train_input_fn, steps=num_train_steps)
 
+    pdir = os.path.join(FLAGS.output_dir, 'predictions')
+    if not tf.gfile.Exists(pdir):
+        tf.gfile.MakeDirs(pdir)
+
     if FLAGS.do_predict:
-        eval_examples = read_squad_examples(
-                input_file=FLAGS.predict_file, is_training=False)
+        if FLAGS.docone:
+            do_iter = DoconeIter(FLAGS.docone_directory)
+            for i, eval_examples in enumerate(do_iter.iterate()):
+                if i > 0 and i % 100 == 0:
+                    tf.logging.info(f"Finished {i * 100000} examples")
 
-        eval_writer = FeatureWriter(
-                filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
-                is_training=False)
-        eval_features = []
+                eval_writer = FeatureWriter(
+                    filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
+                    is_training=False)
+                eval_features = []
+                
+                def append_feature(feature):
+                    eval_features.append(feature)
+                    eval_writer.process_feature(feature)
 
-        def append_feature(feature):
-            eval_features.append(feature)
-            eval_writer.process_feature(feature)
+                convert_examples_to_features(
+                    examples=eval_examples,
+                    tokenizer=tokenizer,
+                    max_seq_length=FLAGS.max_seq_length,
+                    doc_stride=FLAGS.doc_stride,
+                    max_query_length=FLAGS.max_query_length,
+                    is_training=False,
+                    output_fn=append_feature)
+                eval_writer.close()
 
-        convert_examples_to_features(
-                examples=eval_examples,
-                tokenizer=tokenizer,
-                max_seq_length=FLAGS.max_seq_length,
-                doc_stride=FLAGS.doc_stride,
-                max_query_length=FLAGS.max_query_length,
-                is_training=False,
-                output_fn=append_feature)
-        eval_writer.close()
+                tf.logging.info("***** Running predictions *****")
+                tf.logging.info("  Num orig examples = %d", len(eval_examples))
+                tf.logging.info("  Num split examples = %d", len(eval_features))
+                tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
 
-        tf.logging.info("***** Running predictions *****")
-        tf.logging.info("  Num orig examples = %d", len(eval_examples))
-        tf.logging.info("  Num split examples = %d", len(eval_features))
-        tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+                all_results = []
 
-        all_results = []
+                predict_input_fn = input_fn_builder(
+                    input_file=eval_writer.filename,
+                    seq_length=FLAGS.max_seq_length,
+                    is_training=False,
+                    drop_remainder=False)
 
-        predict_input_fn = input_fn_builder(
-                input_file=eval_writer.filename,
-                seq_length=FLAGS.max_seq_length,
-                is_training=False,
-                drop_remainder=False)
+                # If running eval on the TPU, you will need to specify the number of
+                # steps.
+                all_results = []
+                # for result in estimator.predict(predict_input_fn, yield_single_examples=True):
+                #     if len(all_results) % 100 == 0:
+                #         tf.logging.info("Processing example: %d" % (len(all_results)))
+                #     unique_id = int(result["unique_ids"])
+                #     start_logits = [float(x) for x in result["start_logits"].flat]
+                #     end_logits = [float(x) for x in result["end_logits"].flat]
+                #     all_results.append(RawResult(unique_id=unique_id, start_logits=start_logits, end_logits=end_logits))
+                for result in estimator.predict(predict_input_fn, yield_single_examples=True):
+                    if len(all_results) % 100 == 0:
+                        tf.logging.info("Processing example: %d" % (len(all_results)))
+                    unique_id = int(result["unique_ids"])
+                    logits = [float(x) for x in result["logits"].flat]
+                    all_results.append(RawResult(unique_id=unique_id, logits=logits))
 
-        # If running eval on the TPU, you will need to specify the number of
-        # steps.
-        all_results = []
-        for result in estimator.predict(
-                predict_input_fn, yield_single_examples=True):
-            if len(all_results) % 100 == 0:
-                tf.logging.info("Processing example: %d" % (len(all_results)))
-            unique_id = int(result["unique_ids"])
-            logits = [float(x) for x in result["logits"].flat]
-            all_results.append(
-                    RawResult(
-                            unique_id=unique_id,
-                            logits=logits))
+                output_prediction_file = os.path.join(pdir, f"predictions_{i}.json")
+                output_nbest_file = os.path.join(pdir, f"nbest_predictions_{i}.json")
+                output_null_log_odds_file = os.path.join(pdir, f"null_odds_{i}.json")
 
-        output_prediction_file = os.path.join(FLAGS.output_dir, "predictions.json")
-        output_nbest_file = os.path.join(FLAGS.output_dir, "nbest_predictions.json")
-        output_null_log_odds_file = os.path.join(FLAGS.output_dir, "null_odds.json")
+                write_predictions(eval_examples, eval_features, all_results,
+                                  FLAGS.n_best_size, FLAGS.max_answer_length,
+                                  FLAGS.do_lower_case, output_prediction_file,
+                                  output_nbest_file, output_null_log_odds_file)
+        else:
+            eval_examples = read_squad_examples(
+                    input_file=FLAGS.predict_file, is_training=False)
 
-        write_predictions(
-            eval_examples, eval_features, all_results, FLAGS.n_best_size, FLAGS.max_answer_length,
-            FLAGS.do_lower_case, output_prediction_file, output_nbest_file, output_null_log_odds_file)
+            eval_writer = FeatureWriter(
+                    filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
+                    is_training=False)
+            eval_features = []
+
+            def append_feature(feature):
+                eval_features.append(feature)
+                eval_writer.process_feature(feature)
+
+            convert_examples_to_features(
+                    examples=eval_examples,
+                    tokenizer=tokenizer,
+                    max_seq_length=FLAGS.max_seq_length,
+                    doc_stride=FLAGS.doc_stride,
+                    max_query_length=FLAGS.max_query_length,
+                    is_training=False,
+                    output_fn=append_feature)
+            eval_writer.close()
+
+            tf.logging.info("***** Running predictions *****")
+            tf.logging.info("  Num orig examples = %d", len(eval_examples))
+            tf.logging.info("  Num split examples = %d", len(eval_features))
+            tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
+
+            all_results = []
+
+            predict_input_fn = input_fn_builder(
+                    input_file=eval_writer.filename,
+                    seq_length=FLAGS.max_seq_length,
+                    is_training=False,
+                    drop_remainder=False)
+
+            # If running eval on the TPU, you will need to specify the number of
+            # steps.
+            all_results = []
+            for result in estimator.predict(
+                    predict_input_fn, yield_single_examples=True):
+                if len(all_results) % 100 == 0:
+                    tf.logging.info("Processing example: %d" % (len(all_results)))
+                unique_id = int(result["unique_ids"])
+                logits = [float(x) for x in result["logits"].flat]
+                all_results.append(
+                        RawResult(
+                                unique_id=unique_id,
+                                logits=logits))
+
+            output_prediction_file = os.path.join(FLAGS.output_dir, "predictions.json")
+            output_nbest_file = os.path.join(FLAGS.output_dir, "nbest_predictions.json")
+            output_null_log_odds_file = os.path.join(FLAGS.output_dir, "null_odds.json")
+
+            write_predictions(
+                eval_examples, eval_features, all_results, FLAGS.n_best_size, FLAGS.max_answer_length,
+                FLAGS.do_lower_case, output_prediction_file, output_nbest_file, output_null_log_odds_file)
 
 
 if __name__ == "__main__":
