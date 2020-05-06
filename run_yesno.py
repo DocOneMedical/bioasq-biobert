@@ -196,7 +196,7 @@ class SquadExample(object):
 class DoconeIter:
 
     def __init__(self, docone_data_path: str):
-        if not tf.gfile.Exists(docone_data_path):
+        if not tf.io.gfile.exists(docone_data_path):
             raise ValueError(f"Data folder doesn't exist {docone_data_path}")
 
         self.data_path = docone_data_path
@@ -283,7 +283,7 @@ def read_squad_examples(input_file, is_training):
     """Read a SQuAD json file into a list of SquadExample."""
     is_bioasq = True  # for BioASQ
 
-    with tf.gfile.Open(input_file, "r") as reader:
+    with tf.io.gfile.open(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
 
     def is_whitespace(c):
@@ -777,7 +777,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
         all_predictions[example.qas_id] = [prelim_predictions[0].answer, probs]
 
-    with tf.gfile.GFile(output_prediction_file, "w") as writer:
+    with tf.io.gfile.GFile(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
 
 
@@ -973,7 +973,7 @@ def main(_):
 
     validate_flags_or_throw(bert_config)
 
-    tf.gfile.MakeDirs(FLAGS.output_dir)
+    tf.io.gfile.makedirs(FLAGS.output_dir)
 
     tokenizer = tokenization.FullTokenizer(
             vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
@@ -1074,8 +1074,8 @@ def main(_):
         estimator.train(input_fn=train_input_fn, steps=num_train_steps)
 
     pdir = os.path.join(FLAGS.output_dir, 'predictions')
-    if not tf.gfile.Exists(pdir):
-        tf.gfile.MakeDirs(pdir)
+    if not tf.io.gfile.exists(pdir):
+        tf.io.gfile.makedirs(pdir)
 
     if FLAGS.do_predict:
         if FLAGS.docone:

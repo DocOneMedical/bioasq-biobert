@@ -2,4 +2,4 @@ name: bioasq_biobert
 dependencies:
     - numpy
     - pandas=0.23
-    - tensorflow=1.11.0  
+    - tensorflow=1.15
