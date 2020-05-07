@@ -202,9 +202,9 @@ class DoconeIter:
         self.data_path = docone_data_path
 
     def iterate(self):
-        files = glob.glob(f"{self.data_path}/*")
+        files = tf.io.gfile.glob(f"{self.data_path}/*")
         for js in files:
-            with open(js, 'r') as js_handle:
+            with tf.io.gfile.GFile(js, 'r') as js_handle:
                 examples = self.load_examples_from_json(json.load(js_handle))
                 yield examples
 
@@ -224,7 +224,7 @@ class DoconeIter:
                         answer=None)
                 examples.append(example)
 
-        return examples[:500]
+        return examples
 
     @staticmethod
     def process_text(paragraph_text, is_bioasq: bool = True):
@@ -283,7 +283,7 @@ def read_squad_examples(input_file, is_training):
     """Read a SQuAD json file into a list of SquadExample."""
     is_bioasq = True  # for BioASQ
 
-    with tf.io.gfile.open(input_file, "r") as reader:
+    with tf.io.gfile.GFile(input_file, "r") as reader:
         input_data = json.load(reader)["data"]
 
     def is_whitespace(c):
