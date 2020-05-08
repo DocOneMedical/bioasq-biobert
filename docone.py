@@ -37,7 +37,7 @@ def update_dict(json_file: str, final_dict):
         article_id, rx_code, mesh_id = key.split('_')[:3]
         truth_val = True if val[0] == YES_TOKEN else False
         key = (article_id, rx_code, mesh_id)
-     
+  
         if truth_val:
             final_dict[key] = truth_val
         elif key not in final_dict:
@@ -45,4 +45,4 @@ def update_dict(json_file: str, final_dict):
 
 
 if __name__ == '__main__':
-    condense_files_to_csv('outputs/testing/predictions', 'temp.csv')
+    condense_files_to_csv('outputs/predictions', 'sample.csv')
