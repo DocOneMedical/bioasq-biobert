@@ -25,13 +25,15 @@ python run_list.py \
      --vocab_file=$BIOBERT_DIR/vocab.txt \
      --docone --docone_directory=$BIOASQ_DIR/various \
      --bert_config_file=$BIOBERT_DIR/bert_config.json \
-     --init_checkpoint=$OUTPUT_DIR/model.ckpt-1988 \
+     --init_checkpoint=$BIOBERT_DIR/model.ckpt-14599 \
      --max_seq_length=${max_seq} \
-     --train_batch_size=12 \
+     --train_batch_size=10 \
      --learning_rate=5e-6 \
      --doc_stride=128 \
-     --num_train_epochs=5.0 \
+     --num_train_epochs=7 \
      --do_lower_case=False \
-     --train_file=$BIOASQ_DIR/BioASQ-6b/train/Full-Abstract/BioASQ-train-factoid-6b-full-annotated.json \
-     --predict_file=$BIOASQ_DIR/BioASQ-6b/test/Full-Abstract/BioASQ-test-factoid-6b-3.json \
+     --train_file=$BIOASQ_DIR/BioASQ-6b/train/Full-Abstract/BioASQ-train-list-6b-full-annotated.json \
+     --predict_file=$BIOASQ_DIR/BioASQ-6b/test/Full-Abstract/BioASQ-test-list-6b-3.json \
      --output_dir=${OUTPUT_DIR}
+
+# --tpu --tpu_ip=???
