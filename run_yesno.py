@@ -157,8 +157,7 @@ tf.flags.DEFINE_string("bioasq_batch", None, "[Optional] TensorFlow master URL."
 tf.flags.DEFINE_string("bioasq_task", None, "[Optional] TensorFlow master URL.")
 tf.flags.DEFINE_string("bioasq_snippet", None, "[Optional] TensorFlow master URL.")
 
-
-# Docone additions 
+# Docone additions
 flags.DEFINE_bool("docone", False, "If true, use the docone set for prediction.")
 flags.DEFINE_string("docone_directory", None, "SQuAD json for training. E.g., train-v1.1.json")
 
