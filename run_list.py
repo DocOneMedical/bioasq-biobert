@@ -1342,6 +1342,9 @@ def main(_):
                                   FLAGS.n_best_size, FLAGS.max_answer_length,
                                   FLAGS.do_lower_case, output_prediction_file,
                                   output_nbest_file, output_null_log_odds_file)
+
+                # TODO for testing
+                break
         else:
             eval_examples = read_squad_examples(
                     input_file=FLAGS.predict_file, is_training=False)
