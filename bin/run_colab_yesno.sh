@@ -1,6 +1,6 @@
 export BASE_DIR=gs://biobert_params/biobert_apr
 
-while getopts ":o:t:m:d:" opt; do
+while getopts ":o:t:m:d:k:c:" opt; do
   case $opt in
     o) out="$OPTARG"
     ;;
