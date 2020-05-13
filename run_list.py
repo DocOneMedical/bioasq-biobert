@@ -1321,19 +1321,18 @@ def main(_):
                 # If running eval on the TPU, you will need to specify the number of
                 # steps.
                 all_results = []
-                # for result in estimator.predict(predict_input_fn, yield_single_examples=True):
-                #     if len(all_results) % 100 == 0:
-                #         tf.logging.info("Processing example: %d" % (len(all_results)))
-                #     unique_id = int(result["unique_ids"])
-                #     start_logits = [float(x) for x in result["start_logits"].flat]
-                #     end_logits = [float(x) for x in result["end_logits"].flat]
-                #     all_results.append(RawResult(unique_id=unique_id, start_logits=start_logits, end_logits=end_logits))
                 for result in estimator.predict(predict_input_fn, yield_single_examples=True):
                     if len(all_results) % 100 == 0:
                         tf.logging.info("Processing example: %d" % (len(all_results)))
                     unique_id = int(result["unique_ids"])
-                    logits = [float(x) for x in result["logits"].flat]
-                    all_results.append(RawResult(unique_id=unique_id, logits=logits))
+                    start_logits = [float(x) for x in result["start_logits"].flat]
+                    end_logits = [float(x) for x in result["end_logits"].flat]
+                    all_results.append(
+                        RawResult(
+                            unique_id=unique_id,
+                            start_logits=start_logits,
+                            end_logits=end_logits
+                        ))
 
                 output_prediction_file = os.path.join(pdir, f"predictions_{i}.json")
                 output_nbest_file = os.path.join(pdir, f"nbest_predictions_{i}.json")
