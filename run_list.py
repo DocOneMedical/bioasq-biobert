@@ -138,6 +138,7 @@ flags.DEFINE_integer("input_shuffle_seed", 12345, "")
 # Docone additions
 flags.DEFINE_bool("docone", False, "If true, use the docone set for prediction.")
 flags.DEFINE_string("docone_directory", None, "SQuAD json for training. E.g., train-v1.1.json")
+flags.DEFINE_integer("docone_chunk", None, "chunk to start at")
 
 
 class SquadExample(object):
@@ -1288,6 +1289,8 @@ def main(_):
         if FLAGS.docone:
             do_iter = DoconeIter(FLAGS.docone_directory)
             for i, eval_examples in enumerate(do_iter.iterate()):
+                if FLAGS.docone_chunk and i < FLAGS.docone_chunk:
+                    continue
                 if i > 0 and i % 100 == 0:
                     tf.logging.info(f"Finished {i * 100000} examples")
 
