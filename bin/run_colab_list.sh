@@ -39,6 +39,5 @@ python run_list.py \
      --do_lower_case=False \
      --train_file=${DATASET_DIR}/BioASQ-6b/train/Full-Abstract/BioASQ-train-list-6b-full-annotated.json \
      --predict_file=${DATASET_DIR}/BioASQ-6b/test/Full-Abstract/BioASQ-test-list-6b-3.json \
-     --output_dir=${OUTPUT_DIR}
-
-# --tpu --tpu_ip=???
+     --output_dir=${OUTPUT_DIR} \
+     --use_tpu --tpu_name=grpc://${tpu_ip}:8470
