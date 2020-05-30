@@ -1,6 +1,6 @@
 export BASE_DIR=gs://biobert_params/biobert_apr
 
-while getopts ":o:t:m:d:k:c:" opt; do
+while getopts ":o:t:m:d:k:c:u:" opt; do
   case $opt in
     o) out="$OPTARG"
     ;;
@@ -13,6 +13,8 @@ while getopts ":o:t:m:d:k:c:" opt; do
     k) dataset="$OPTARG"
     ;;
     c) checkpt="$OPTARG"
+    ;;
+    u) docone_chunk="$OPTARG"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
     ;;
@@ -28,7 +30,7 @@ python run_list.py \
      --do_train=${do_train} \
      --do_predict=True \
      --vocab_file=${COMMON_DIR}/vocab.txt \
-     --docone --docone_directory=${DATASET_DIR}/${dataset} \
+     --docone --docone_directory=${DATASET_DIR}/${dataset} --docone_chunk=${docone_chunk:-0} \
      --bert_config_file=${COMMON_DIR}/bert_config.json \
      --init_checkpoint=${BASE_DIR}/${checkpt} \
      --max_seq_length=${max_seq} \

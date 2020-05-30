@@ -1181,7 +1181,7 @@ def validate_flags_or_throw(bert_config):
 
 
 def main(_):
-    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.logging.set_verbosity(tf.logging.WARN)
 
     start_t = datetime.now()
     print(start_t)
@@ -1289,10 +1289,10 @@ def main(_):
         if FLAGS.docone:
             do_iter = DoconeIter(FLAGS.docone_directory)
             for i, eval_examples in enumerate(do_iter.iterate()):
+                tf.logging.warning(f"Processing chunk {i}".format(i))
+
                 if FLAGS.docone_chunk and i < FLAGS.docone_chunk:
                     continue
-                if i > 0 and i % 100 == 0:
-                    tf.logging.info(f"Finished {i * 100000} examples")
 
                 eval_writer = FeatureWriter(
                     filename=os.path.join(FLAGS.output_dir, "eval.tf_record"),
