@@ -21,6 +21,7 @@ import json
 import random
 import re
 
+import bioasq_biobert.utils
 from src.bioasq_biobert import modeling
 import six
 import tensorflow as tf
@@ -134,7 +135,7 @@ class BertModelTest(tf.test.TestCase):
 
   def run_tester(self, tester):
     with self.test_session() as sess:
-      ops = tester.create_model()
+      ops = bioasq_biobert.utils.create_model()
       init_op = tf.group(tf.global_variables_initializer(),
                          tf.local_variables_initializer())
       sess.run(init_op)
