@@ -20,7 +20,7 @@ import os
 import tempfile
 import six
 import tensorflow as tf
-import tokenization
+from src.bioasq_biobert import tokenization
 
 
 class TokenizationTest(tf.test.TestCase):
