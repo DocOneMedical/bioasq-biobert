@@ -23,8 +23,10 @@ import collections
 import json
 import re
 
-from src.bioasq_biobert import modeling, tokenization
 import tensorflow as tf
+
+from bioasq_biobert import modeling, tokenization
+
 
 flags = tf.flags
 

@@ -21,7 +21,7 @@ from __future__ import print_function
 import collections
 import random
 import tensorflow as tf
-from src.bioasq_biobert import tokenization
+from bioasq_biobert import tokenization
 
 flags = tf.flags
 

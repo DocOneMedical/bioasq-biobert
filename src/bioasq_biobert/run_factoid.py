@@ -23,9 +23,11 @@ import json
 import math
 import os
 import random
-from src.bioasq_biobert import optimization, modeling, tokenization
 import six
 import tensorflow as tf
+
+from bioasq_biobert import optimization, modeling, tokenization
+
 
 flags = tf.flags
 
